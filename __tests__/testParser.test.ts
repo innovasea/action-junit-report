@@ -141,12 +141,13 @@ describe('resolvePath', () => {
 
 describe('parseFile', () => {
   it('should parse CalcUtils results', async () => {
-    const {totalCount, skippedCount, annotations} = await parseFile(
+    const {totalCount, skippedCount, annotations, totalTime} = await parseFile(
       'test_results/tests/utils/target/surefire-reports/TEST-action.surefire.report.calc.CalcUtilsTest.xml'
     )
 
     expect(totalCount).toBe(2)
     expect(skippedCount).toBe(0)
+    expect(totalTime).toBe(0.001)
     expect(annotations).toStrictEqual([
       {
         path: 'test_results/tests/utils/src/test/java/action/surefire/report/calc/CalcUtilsTest.kt',
@@ -1256,7 +1257,8 @@ describe('parseTestReports', () => {
       failed: 0,
       foundFiles: 1,
       passed: 0,
-      annotations: []
+      annotations: [],
+      totalTime: 0
     })
   })
 })

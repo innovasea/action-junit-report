@@ -60,7 +60,8 @@ export async function run(): Promise<void> {
       failed: 0,
       passed: 0,
       foundFiles: 0,
-      annotations: []
+      annotations: [],
+      totalTime: 0
     }
 
     core.info(`Preparing ${reportsCount} report as configured.`)
@@ -86,6 +87,11 @@ export async function run(): Promise<void> {
       mergedResult.skipped += testResult.skipped
       mergedResult.failed += testResult.failed
       mergedResult.passed += testResult.passed
+      if(testResult.totalTime !== undefined && mergedResult.totalTime !== undefined) {
+        mergedResult.totalTime += testResult.totalTime;
+      } else {
+        mergedResult.totalTime = undefined;
+      }
       testResults.push(testResult)
     }
 
@@ -93,6 +99,7 @@ export async function run(): Promise<void> {
     core.setOutput('passed', mergedResult.passed)
     core.setOutput('skipped', mergedResult.skipped)
     core.setOutput('failed', mergedResult.failed)
+    core.setOutput('time', mergedResult.totalTime);
 
     if (!(mergedResult.totalCount > 0 || mergedResult.skipped > 0) && requireTests) {
       core.setFailed(`❌ No test results found for ${checkName}`)

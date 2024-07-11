@@ -10,13 +10,15 @@ interface InternalTestResult {
   totalCount: number
   skippedCount: number
   annotations: Annotation[]
-  testResults: InternalTestResult[]
+  testResults: InternalTestResult[],
+  totalTime?: number
 }
 
 interface TestCasesResult {
   totalCount: number
   skippedCount: number
   annotations: Annotation[]
+  time?: number
 }
 
 export interface TestResult {
@@ -28,6 +30,7 @@ export interface TestResult {
   passed: number
   foundFiles: number
   annotations: Annotation[]
+  totalTime?: number
 }
 
 export interface Annotation {
@@ -182,7 +185,8 @@ export async function parseFile(
       totalCount: 0,
       skippedCount: 0,
       annotations: [],
-      testResults: []
+      testResults: [],
+      totalTime: 0
     }
   }
 
@@ -196,7 +200,8 @@ export async function parseFile(
       totalCount: 0,
       skippedCount: 0,
       annotations: [],
-      testResults: []
+      testResults: [],
+      totalTime: 0
     }
   }
 
@@ -251,6 +256,7 @@ async function parseSuite(
 
   let totalCount = 0
   let skippedCount = 0
+  let totalTime: number | undefined = 0;
   const annotations: Annotation[] = []
 
   // parse testCases
@@ -279,6 +285,12 @@ async function parseSuite(
     // expand global annotations array
     totalCount += parsedTestCases.totalCount
     skippedCount += parsedTestCases.skippedCount
+    if(parsedTestCases.time !== undefined && totalTime !== undefined) {
+      totalTime += parsedTestCases.time
+    } else {
+      totalTime = undefined;
+    }
+    console.log("TimeHere: " + totalTime);
     annotations.push(...parsedTestCases.annotations)
     globalAnnotations.push(...parsedTestCases.annotations)
   }
@@ -289,7 +301,8 @@ async function parseSuite(
       totalCount,
       skippedCount,
       annotations: globalAnnotations,
-      testResults: []
+      testResults: [],
+      totalTime
     }
   }
 
@@ -325,7 +338,10 @@ async function parseSuite(
     childSuiteResults.push(childSuiteResult)
     totalCount += childSuiteResult.totalCount
     skippedCount += childSuiteResult.skippedCount
-
+    if(childSuiteResult.totalTime !== undefined && totalTime !== undefined) {
+      totalTime += childSuiteResult.totalTime;
+    }
+    
     // skip out if we reached our annotations limit
     if (annotationsLimit > 0 && globalAnnotations.length >= annotationsLimit) {
       return {
@@ -333,7 +349,8 @@ async function parseSuite(
         totalCount,
         skippedCount,
         annotations: globalAnnotations,
-        testResults: []
+        testResults: [],
+        totalTime
       }
     }
   }
@@ -343,7 +360,8 @@ async function parseSuite(
     totalCount,
     skippedCount,
     annotations: globalAnnotations,
-    testResults: childSuiteResults
+    testResults: childSuiteResults,
+    totalTime
   }
 }
 
@@ -366,6 +384,7 @@ async function parseTestCases(
   const annotations: Annotation[] = []
   let totalCount = 0
   let skippedCount = 0
+  let time: number | undefined = 0;
   if (checkRetries) {
     // identify duplicates, in case of flaky tests, and remove them
     const testcaseMap = new Map<string, any>()
@@ -402,6 +421,7 @@ async function parseTestCases(
     const failed = testFailure && !skip // test faiure, but was skipped -> don't fail if a ignored test failed
     const success = !testFailure // not a failure -> thus a success
     const annotationLevel = success || skip ? 'notice' : 'failure' // a skipped test shall not fail the run
+    
 
     if (skip) {
       skippedCount++
@@ -494,7 +514,13 @@ async function parseTestCases(
     resolvedPath = testFilesPrefix ? pathHelper.join(testFilesPrefix, resolvedPath) : resolvedPath
 
     // fish the time-taken out of the test case attributes, if present
-    const testTime = testcase._attributes.time === undefined ? '' : ` (${testcase._attributes.time}s)`
+    const timeAttribute = testcase._attributes.time;
+    if(timeAttribute !== undefined && time !== undefined) {
+      time += Number(timeAttribute);
+    } else {
+      time = undefined;
+    }
+    const testTime = timeAttribute === undefined ? '' : ` (${timeAttribute}s)`
 
     core.info(`${resolvedPath}:${pos.line} | ${message.split('\n', 1)[0]}${testTime}`)
 
@@ -518,7 +544,8 @@ async function parseTestCases(
   return {
     totalCount,
     skippedCount,
-    annotations
+    annotations,
+    time
   }
 }
 
@@ -551,6 +578,7 @@ export async function parseTestReports(
   let totalCount = 0
   let skipped = 0
   let foundFiles = 0
+  let totalTime: number | undefined = 0;
   for await (const file of globber.globGenerator()) {
     foundFiles++
     core.debug(`Parsing report file: ${file}`)
@@ -558,7 +586,8 @@ export async function parseTestReports(
     const {
       totalCount: c,
       skippedCount: s,
-      annotations: a
+      annotations: a,
+      totalTime: t,
     } = await parseFile(
       file,
       suiteRegex,
@@ -577,7 +606,12 @@ export async function parseTestReports(
     totalCount += c
     skipped += s
     annotations = annotations.concat(a)
-
+    if(t !== undefined && totalTime != undefined) {
+      totalTime += t;
+    } else {
+      totalTime = undefined;
+    }
+    
     if (annotationsLimit > 0 && annotations.length >= annotationsLimit) {
       break
     }
@@ -595,7 +629,8 @@ export async function parseTestReports(
     failed,
     passed,
     foundFiles,
-    annotations
+    annotations,
+    totalTime
   }
 }
 
