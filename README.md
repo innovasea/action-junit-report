@@ -152,6 +152,7 @@ A full set list of possible output values for this action.
 | `outputs.passed`           | The number of passed test cases.                                                                                    |
 | `outputs.skipped`          | The number of skipped test cases.                                                                                   |
 | `outputs.failed`           | The number of failed test cases.                                                                                    |
+| `outputs.time`             | The total time taken to test the test cases.                                                                        |
 | `outputs.summary`          | The short summary of the junit report. In html format (as also constructed by GitHub for the summary).              |
 | `outputs.detailed_summary` | The full table with all test results in a summary. In html format (as also constructed by GitHub for the summary).  |
 | `outputs.flaky_summary`    | The full table with all flaky results in a summary. In html format (as also constructed by GitHub for the summary). |
