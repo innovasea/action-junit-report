@@ -141,12 +141,13 @@ describe('resolvePath', () => {
 
 describe('parseFile', () => {
   it('should parse CalcUtils results', async () => {
-    const {totalCount, skippedCount, annotations} = await parseFile(
+    const {totalCount, skippedCount, annotations, totalTime} = await parseFile(
       'test_results/tests/utils/target/surefire-reports/TEST-action.surefire.report.calc.CalcUtilsTest.xml'
     )
 
     expect(totalCount).toBe(2)
     expect(skippedCount).toBe(0)
+    expect(totalTime).toBe(0.001)
     expect(annotations).toStrictEqual([
       {
         path: 'test_results/tests/utils/src/test/java/action/surefire/report/calc/CalcUtilsTest.kt',
@@ -805,7 +806,8 @@ action.surefire.report.email.InvalidEmailAddressException: Invalid email address
         retries: 0,
         annotation_level: 'notice',
         status: 'success',
-        title: 'default config/Config files default config projectUTCOffset should be a callable with current UTC offset',
+        title:
+          'default config/Config files default config projectUTCOffset should be a callable with current UTC offset',
         message: 'Config files default config projectUTCOffset should be a callable with current UTC offset',
         raw_details: ''
       }
@@ -1055,17 +1057,17 @@ action.surefire.report.email.InvalidEmailAddressException: Invalid email address
     expect(skippedCount).toBe(0)
     expect(filtered).toStrictEqual([
       {
-        "annotation_level": "notice",
-        "end_column": 0,
-        "end_line": 1,
-        "message": "testFlakyFailure",
-        "path": "Class",
-        "raw_details": "",
-        "retries": 1,
-        "start_column": 0,
-        "start_line": 1,
-        "status": "success",
-        "title": "Class.testFlakyFailure"
+        annotation_level: 'notice',
+        end_column: 0,
+        end_line: 1,
+        message: 'testFlakyFailure',
+        path: 'Class',
+        raw_details: '',
+        retries: 1,
+        start_column: 0,
+        start_line: 1,
+        status: 'success',
+        title: 'Class.testFlakyFailure'
       }
     ])
   })
@@ -1256,7 +1258,8 @@ describe('parseTestReports', () => {
       failed: 0,
       foundFiles: 1,
       passed: 0,
-      annotations: []
+      annotations: [],
+      totalTime: 0
     })
   })
 })

@@ -118,6 +118,8 @@ outputs:
     description: 'The count of all skipped tests'
   failed:
     description: 'The count of all failed tests'
+  time:
+    description: 'The total time taken of all tests'
   summary:
     description: 'The short summary of the junit report. In html format (as also constructed by GitHub for the summary).'
   detailed_summary:
