@@ -290,7 +290,8 @@ async function run() {
             failed: 0,
             passed: 0,
             foundFiles: 0,
-            annotations: []
+            annotations: [],
+            totalTime: 0
         };
         core.info(`Preparing ${reportsCount} report as configured.`);
         for (let i = 0; i < reportsCount; i++) {
@@ -299,12 +300,19 @@ async function run() {
             mergedResult.skipped += testResult.skipped;
             mergedResult.failed += testResult.failed;
             mergedResult.passed += testResult.passed;
+            if (testResult.totalTime !== undefined && mergedResult.totalTime !== undefined) {
+                mergedResult.totalTime += testResult.totalTime;
+            }
+            else {
+                mergedResult.totalTime = undefined;
+            }
             testResults.push(testResult);
         }
         core.setOutput('total', mergedResult.totalCount);
         core.setOutput('passed', mergedResult.passed);
         core.setOutput('skipped', mergedResult.skipped);
         core.setOutput('failed', mergedResult.failed);
+        core.setOutput('time', mergedResult.totalTime);
         if (!(mergedResult.totalCount > 0 || mergedResult.skipped > 0) && requireTests) {
             core.setFailed(`❌ No test results found for ${checkName}`);
             return; // end if we failed due to no tests, but configured to require tests
@@ -505,7 +513,8 @@ annotatePassed = false, checkRetries = false, excludeSources = ['/build/', '/__p
             totalCount: 0,
             skippedCount: 0,
             annotations: [],
-            testResults: []
+            testResults: [],
+            totalTime: 0
         };
     }
     // parse child test suites
@@ -517,7 +526,8 @@ annotatePassed = false, checkRetries = false, excludeSources = ['/build/', '/__p
             totalCount: 0,
             skippedCount: 0,
             annotations: [],
-            testResults: []
+            testResults: [],
+            totalTime: 0
         };
     }
     return parseSuite(testsuite, suiteRegex, // no-op
@@ -540,6 +550,7 @@ breadCrumb, breadCrumbDelimiter = '/', annotatePassed = false, checkRetries = fa
     }
     let totalCount = 0;
     let skippedCount = 0;
+    let totalTime = 0;
     const annotations = [];
     // parse testCases
     if (suite.testcase) {
@@ -551,6 +562,13 @@ breadCrumb, breadCrumbDelimiter = '/', annotatePassed = false, checkRetries = fa
         // expand global annotations array
         totalCount += parsedTestCases.totalCount;
         skippedCount += parsedTestCases.skippedCount;
+        if (parsedTestCases.time !== undefined && totalTime !== undefined) {
+            totalTime += parsedTestCases.time;
+        }
+        else {
+            totalTime = undefined;
+        }
+        console.log(`TimeHere: ${totalTime}`); /* eslint-disable-line no-console */
         annotations.push(...parsedTestCases.annotations);
         globalAnnotations.push(...parsedTestCases.annotations);
     }
@@ -561,7 +579,8 @@ breadCrumb, breadCrumbDelimiter = '/', annotatePassed = false, checkRetries = fa
             totalCount,
             skippedCount,
             annotations: globalAnnotations,
-            testResults: []
+            testResults: [],
+            totalTime
         };
     }
     // parse child test suites
@@ -579,6 +598,9 @@ breadCrumb, breadCrumbDelimiter = '/', annotatePassed = false, checkRetries = fa
         childSuiteResults.push(childSuiteResult);
         totalCount += childSuiteResult.totalCount;
         skippedCount += childSuiteResult.skippedCount;
+        if (childSuiteResult.totalTime !== undefined && totalTime !== undefined) {
+            totalTime += childSuiteResult.totalTime;
+        }
         // skip out if we reached our annotations limit
         if (annotationsLimit > 0 && globalAnnotations.length >= annotationsLimit) {
             return {
@@ -586,7 +608,8 @@ breadCrumb, breadCrumbDelimiter = '/', annotatePassed = false, checkRetries = fa
                 totalCount,
                 skippedCount,
                 annotations: globalAnnotations,
-                testResults: []
+                testResults: [],
+                totalTime
             };
         }
     }
@@ -595,7 +618,8 @@ breadCrumb, breadCrumbDelimiter = '/', annotatePassed = false, checkRetries = fa
         totalCount,
         skippedCount,
         annotations: globalAnnotations,
-        testResults: childSuiteResults
+        testResults: childSuiteResults,
+        totalTime
     };
 }
 async function parseTestCases(suiteName, suiteFile, suiteLine, breadCrumb, testcases, annotatePassed = false, checkRetries = false, excludeSources, checkTitleTemplate = undefined, testFilesPrefix = '', transformer, followSymlink, truncateStackTraces, limit = -1) {
@@ -603,6 +627,7 @@ async function parseTestCases(suiteName, suiteFile, suiteLine, breadCrumb, testc
     const annotations = [];
     let totalCount = 0;
     let skippedCount = 0;
+    let time = 0;
     if (checkRetries) {
         // identify duplicates, in case of flaky tests, and remove them
         const testcaseMap = new Map();
@@ -707,7 +732,14 @@ async function parseTestCases(suiteName, suiteFile, suiteLine, breadCrumb, testc
         // optionally attach the prefix to the path
         resolvedPath = testFilesPrefix ? pathHelper.join(testFilesPrefix, resolvedPath) : resolvedPath;
         // fish the time-taken out of the test case attributes, if present
-        const testTime = testcase._attributes.time === undefined ? '' : ` (${testcase._attributes.time}s)`;
+        const timeAttribute = testcase._attributes.time;
+        if (timeAttribute !== undefined && time !== undefined) {
+            time += Number(timeAttribute);
+        }
+        else {
+            time = undefined;
+        }
+        const testTime = timeAttribute === undefined ? '' : ` (${timeAttribute}s)`;
         core.info(`${resolvedPath}:${pos.line} | ${message.split('\n', 1)[0]}${testTime}`);
         annotations.push({
             path: resolvedPath,
@@ -728,7 +760,8 @@ async function parseTestCases(suiteName, suiteFile, suiteLine, breadCrumb, testc
     return {
         totalCount,
         skippedCount,
-        annotations
+        annotations,
+        time
     };
 }
 /**
@@ -746,15 +779,22 @@ annotatePassed = false, checkRetries = false, excludeSources, checkTitleTemplate
     let totalCount = 0;
     let skipped = 0;
     let foundFiles = 0;
+    let totalTime = 0;
     for await (const file of globber.globGenerator()) {
         foundFiles++;
         core.debug(`Parsing report file: ${file}`);
-        const { totalCount: c, skippedCount: s, annotations: a } = await parseFile(file, suiteRegex, annotatePassed, checkRetries, excludeSources, checkTitleTemplate, breadCrumbDelimiter, testFilesPrefix, transformer, followSymlink, annotationsLimit, truncateStackTraces);
+        const { totalCount: c, skippedCount: s, annotations: a, totalTime: t } = await parseFile(file, suiteRegex, annotatePassed, checkRetries, excludeSources, checkTitleTemplate, breadCrumbDelimiter, testFilesPrefix, transformer, followSymlink, annotationsLimit, truncateStackTraces);
         if (c === 0)
             continue;
         totalCount += c;
         skipped += s;
         annotations = annotations.concat(a);
+        if (t !== undefined && totalTime !== undefined) {
+            totalTime += t;
+        }
+        else {
+            totalTime = undefined;
+        }
         if (annotationsLimit > 0 && annotations.length >= annotationsLimit) {
             break;
         }
@@ -770,7 +810,8 @@ annotatePassed = false, checkRetries = false, excludeSources, checkTitleTemplate
         failed,
         passed,
         foundFiles,
-        annotations
+        annotations,
+        totalTime
     };
 }
 /**
