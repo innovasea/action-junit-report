@@ -568,7 +568,7 @@ breadCrumb, breadCrumbDelimiter = '/', annotatePassed = false, checkRetries = fa
         else {
             totalTime = undefined;
         }
-        console.log(`TimeHere: ${totalTime}`); /* eslint-disable-line no-console */
+        core.info(`Time Here: ${totalTime}`);
         annotations.push(...parsedTestCases.annotations);
         globalAnnotations.push(...parsedTestCases.annotations);
     }
@@ -733,6 +733,7 @@ async function parseTestCases(suiteName, suiteFile, suiteLine, breadCrumb, testc
         resolvedPath = testFilesPrefix ? pathHelper.join(testFilesPrefix, resolvedPath) : resolvedPath;
         // fish the time-taken out of the test case attributes, if present
         const timeAttribute = testcase._attributes.time;
+        core.info(`TEST CASE TIME: ${timeAttribute}`);
         if (timeAttribute !== undefined && time !== undefined) {
             time += Number(timeAttribute);
         }

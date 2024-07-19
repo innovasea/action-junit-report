@@ -290,7 +290,7 @@ async function parseSuite(
     } else {
       totalTime = undefined
     }
-    console.log(`TimeHere: ${totalTime}`) /* eslint-disable-line no-console */
+    core.info(`Time Here: ${totalTime}`)
     annotations.push(...parsedTestCases.annotations)
     globalAnnotations.push(...parsedTestCases.annotations)
   }
@@ -514,6 +514,7 @@ async function parseTestCases(
 
     // fish the time-taken out of the test case attributes, if present
     const timeAttribute = testcase._attributes.time
+    core.info(`TEST CASE TIME: ${timeAttribute}`)
     if (timeAttribute !== undefined && time !== undefined) {
       time += Number(timeAttribute)
     } else {
