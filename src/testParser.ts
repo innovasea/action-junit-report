@@ -285,11 +285,13 @@ async function parseSuite(
     // expand global annotations array
     totalCount += parsedTestCases.totalCount
     skippedCount += parsedTestCases.skippedCount
+    core.info(`PARSED TEST TIME: ${parsedTestCases.time}`)
     if (parsedTestCases.time !== undefined && totalTime !== undefined) {
       totalTime += parsedTestCases.time
     } else {
       totalTime = undefined
     }
+
     core.info(`Time Here: ${totalTime}`)
     annotations.push(...parsedTestCases.annotations)
     globalAnnotations.push(...parsedTestCases.annotations)
@@ -415,6 +417,16 @@ async function parseTestCases(
   for (const testcase of testcases) {
     totalCount++
 
+    // fish the time-taken out of the test case attributes, if present
+    const timeAttribute = testcase._attributes.time
+    core.info(`TEST CASE TIME: ${timeAttribute}`)
+    if (timeAttribute !== undefined && time !== undefined) {
+      time += Number(timeAttribute)
+    } else {
+      time = undefined
+    }
+    const testTime = timeAttribute === undefined ? '' : ` (${timeAttribute}s)`
+
     const testFailure = testcase.failure || testcase.error // test failed
     const skip =
       testcase.skipped || testcase._attributes.status === 'disabled' || testcase._attributes.status === 'ignored'
@@ -511,16 +523,6 @@ async function parseTestCases(
 
     // optionally attach the prefix to the path
     resolvedPath = testFilesPrefix ? pathHelper.join(testFilesPrefix, resolvedPath) : resolvedPath
-
-    // fish the time-taken out of the test case attributes, if present
-    const timeAttribute = testcase._attributes.time
-    core.info(`TEST CASE TIME: ${timeAttribute}`)
-    if (timeAttribute !== undefined && time !== undefined) {
-      time += Number(timeAttribute)
-    } else {
-      time = undefined
-    }
-    const testTime = timeAttribute === undefined ? '' : ` (${timeAttribute}s)`
 
     core.info(`${resolvedPath}:${pos.line} | ${message.split('\n', 1)[0]}${testTime}`)
 
